@@ -12,17 +12,30 @@ using PodcastManagementSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+string connectionString;
 var awsCredentials = new BasicAWSCredentials(
     builder.Configuration["AWS:AccessKey"],
     builder.Configuration["AWS:SecretKey"]
 );
 var awsRegion = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"]);
-var ssmClient = new AmazonSimpleSystemsManagementClient(awsCredentials, awsRegion);
 
-var username = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/username" })).Parameter.Value;
-var password = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/password", WithDecryption = true })).Parameter.Value;
-var endpoint = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/endpoint" })).Parameter.Value;
-var connectionString = $"Server={endpoint};Database=PodcastDB;User Id={username};Password={password};TrustServerCertificate=True;Encrypt=False;";
+// If RDS is deleted after demo, app can be ran locally using LocalDB after running the db script
+try
+{
+    var ssmClient = new AmazonSimpleSystemsManagementClient(awsCredentials, awsRegion);
+
+    var username = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/username" })).Parameter.Value;
+    var password = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/password", WithDecryption = true })).Parameter.Value;
+    var endpoint = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/endpoint" })).Parameter.Value;
+
+    connectionString = $"Server={endpoint};Database=PodcastDB;User Id={username};Password={password};TrustServerCertificate=True;Encrypt=False;";
+}
+catch
+{
+    connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? builder.Configuration.GetConnectionString("RDSConnection")
+        ?? "Server=(localdb)\\mssqllocaldb;Database=PodcastDB_Group17;Trusted_Connection=True;MultipleActiveResultSets=true";
+}
 
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
