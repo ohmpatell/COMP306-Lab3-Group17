@@ -238,6 +238,7 @@ namespace PodcastManagementSystem.Controllers
 
         [Authorize]
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> EditComment(string episodeId, string commentId, string commentText)
         {
             var comment = await _commentService.GetCommentAsync(episodeId, commentId);
@@ -246,7 +247,8 @@ namespace PodcastManagementSystem.Controllers
 
             if (comment == null)
             {
-                return NotFound();
+                TempData["Error"] = "Comment not found";
+                return RedirectToAction(nameof(Details), new { id = episodeId });
             }
 
             // Admin can edit any comment, users can only edit their own
@@ -270,6 +272,7 @@ namespace PodcastManagementSystem.Controllers
             comment.Text = commentText;
             await _commentService.UpdateCommentAsync(comment);
 
+            TempData["Success"] = "Comment updated successfully";
             return RedirectToAction(nameof(Details), new { id = episodeId });
         }
     }

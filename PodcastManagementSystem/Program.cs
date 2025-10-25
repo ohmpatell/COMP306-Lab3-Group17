@@ -1,7 +1,9 @@
 using Amazon;
 using Amazon.DynamoDBv2;
-using Amazon.S3;
 using Amazon.Runtime;
+using Amazon.S3;
+using Amazon.SimpleSystemsManagement;
+using Amazon.SimpleSystemsManagement.Model;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using PodcastManagementSystem.Data;
@@ -10,8 +12,18 @@ using PodcastManagementSystem.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-var connectionString = builder.Configuration.GetConnectionString("RDSConnection");
+var awsCredentials = new BasicAWSCredentials(
+    builder.Configuration["AWS:AccessKey"],
+    builder.Configuration["AWS:SecretKey"]
+);
+var awsRegion = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"]);
+var ssmClient = new AmazonSimpleSystemsManagementClient(awsCredentials, awsRegion);
+
+var username = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/username" })).Parameter.Value;
+var password = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/password", WithDecryption = true })).Parameter.Value;
+var endpoint = (await ssmClient.GetParameterAsync(new GetParameterRequest { Name = "/podcast/rds/endpoint" })).Parameter.Value;
+var connectionString = $"Server={endpoint};Database=PodcastDB;User Id={username};Password={password};TrustServerCertificate=True;Encrypt=False;";
+
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -28,14 +40,6 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => {
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddRazorPages();
-
-// AWS Configuration - Manual Credentials
-var awsCredentials = new BasicAWSCredentials(
-    builder.Configuration["AWS:AccessKey"],
-    builder.Configuration["AWS:SecretKey"]
-);
-
-var awsRegion = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"]);
 
 builder.Services.AddSingleton<IAmazonDynamoDB>(sp =>
     new AmazonDynamoDBClient(awsCredentials, awsRegion));

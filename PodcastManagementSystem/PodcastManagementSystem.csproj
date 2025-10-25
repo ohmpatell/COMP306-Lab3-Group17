@@ -22,14 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Data\Migrations\" />
-    <Folder Include="Data\Scripts\" />
-    <Folder Include="Data\SQL\" />
     <Folder Include="Migrations\" />
-    <Folder Include="Models\Entities\" />
-    <Folder Include="Models\ViewModels\" />
-    <Folder Include="podcast\rds\" />
-    <Folder Include="Repositories\Interfaces\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

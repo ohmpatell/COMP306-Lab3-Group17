@@ -16,6 +16,14 @@
     </a>
 </div>
 
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        @TempData["Error"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="card mb-4">
     <div class="card-body">
         <h1 class="card-title mb-4">@Model.Title</h1>
@@ -78,6 +86,7 @@
         @if (User.Identity.IsAuthenticated)
         {
             <form asp-action="AddComment" method="post" class="mb-4">
+                @Html.AntiForgeryToken()
                 <input type="hidden" name="episodeId" value="@Model.EpisodeID" />
                 <div class="mb-3">
                     <label class="form-label">Add a comment</label>
@@ -97,25 +106,39 @@
         {
             @foreach (var comment in ViewBag.Comments)
             {
-                <div class="card mb-3">
+                var commentTime = DateTime.Parse(comment.Timestamp);
+                var hoursSince = (DateTime.UtcNow - commentTime).TotalHours;
+                var canEditComment = User.Identity.IsAuthenticated &&
+                (isAdmin || (User.Identity.Name == comment.UserID && hoursSince < 24));
+
+                <div class="card mb-3" id="comment-@comment.CommentID">
                     <div class="card-body">
                         <h6 class="card-subtitle mb-2">
                             <i class="fas fa-user-circle"></i> @comment.Username
-                            <small class="text-muted">- @DateTime.Parse(comment.Timestamp).ToString("MMM dd, yyyy hh:mm tt")</small>
+                            <small class="text-muted">- @commentTime.ToString("MMM dd, yyyy hh:mm tt")</small>
                         </h6>
-                        <p class="card-text" id="comment-text-@comment.CommentID">@comment.Text</p>
+                        <p class="card-text comment-text-display-@comment.CommentID">@comment.Text</p>
 
-                        @if (User.Identity.IsAuthenticated && User.Identity.Name == comment.UserID)
+                        <form asp-action="EditComment" method="post" class="comment-edit-form-@comment.CommentID" style="display:none;">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="episodeId" value="@Model.EpisodeID" />
+                            <input type="hidden" name="commentId" value="@comment.CommentID" />
+                            <div class="mb-2">
+                                <textarea name="commentText" class="form-control" rows="3" required>@comment.Text</textarea>
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-success">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="cancelEdit('@comment.CommentID')">
+                                Cancel
+                            </button>
+                        </form>
+
+                        @if (canEditComment)
                         {
-                            var commentTime = DateTime.Parse(comment.Timestamp);
-                            var hoursSince = (DateTime.UtcNow - commentTime).TotalHours;
-
-                            @if (hoursSince < 24)
-                            {
-                                <button class="btn btn-sm btn-warning" onclick="editComment('@Model.EpisodeID', '@comment.CommentID', '@Html.Raw(comment.Text.Replace("'", "\\'"))')">
-                                    <i class="fas fa-edit"></i> Edit
-                                </button>
-                            }
+                            <button class="btn btn-sm btn-warning comment-edit-btn-@comment.CommentID" onclick="showEditForm('@comment.CommentID')">
+                                <i class="fas fa-edit"></i> Edit
+                            </button>
                         }
                     </div>
                 </div>
@@ -130,42 +153,16 @@
 
 @section Scripts {
     <script>
-        function editComment(episodeId, commentId, currentText) {
-            var newText = prompt("Edit your comment:", currentText);
-            if (newText && newText !== currentText) {
-                var form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/Episodes/EditComment';
+        function showEditForm(commentId) {
+            document.querySelector('.comment-text-display-' + commentId).style.display = 'none';
+            document.querySelector('.comment-edit-btn-' + commentId).style.display = 'none';
+            document.querySelector('.comment-edit-form-' + commentId).style.display = 'block';
+        }
 
-                var episodeInput = document.createElement('input');
-                episodeInput.type = 'hidden';
-                episodeInput.name = 'episodeId';
-                episodeInput.value = episodeId;
-
-                var commentInput = document.createElement('input');
-                commentInput.type = 'hidden';
-                commentInput.name = 'commentId';
-                commentInput.value = commentId;
-
-                var textInput = document.createElement('input');
-                textInput.type = 'hidden';
-                textInput.name = 'commentText';
-                textInput.value = newText;
-
-                var token = document.querySelector('input[name="__RequestVerificationToken"]');
-                var tokenInput = document.createElement('input');
-                tokenInput.type = 'hidden';
-                tokenInput.name = '__RequestVerificationToken';
-                tokenInput.value = token.value;
-
-                form.appendChild(episodeInput);
-                form.appendChild(commentInput);
-                form.appendChild(textInput);
-                form.appendChild(tokenInput);
-
-                document.body.appendChild(form);
-                form.submit();
-            }
+        function cancelEdit(commentId) {
+            document.querySelector('.comment-text-display-' + commentId).style.display = 'block';
+            document.querySelector('.comment-edit-btn-' + commentId).style.display = 'inline-block';
+            document.querySelector('.comment-edit-form-' + commentId).style.display = 'none';
         }
     </script>
 }
