@@ -47,14 +47,12 @@ builder.Services.AddSingleton<IAmazonDynamoDB>(sp =>
 builder.Services.AddSingleton<IAmazonS3>(sp =>
     new AmazonS3Client(awsCredentials, awsRegion));
 
-// Register application services
 builder.Services.AddScoped<IEpisodeService, EpisodeService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
 builder.Services.AddScoped<IS3Service, S3Service>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseMigrationsEndPoint();

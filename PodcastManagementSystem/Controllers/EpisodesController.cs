@@ -251,14 +251,12 @@ namespace PodcastManagementSystem.Controllers
                 return RedirectToAction(nameof(Details), new { id = episodeId });
             }
 
-            // Admin can edit any comment, users can only edit their own
             if (currentUser.Role != UserRole.Admin && comment.UserID != User.Identity.Name)
             {
                 TempData["Error"] = "You can only edit your own comments";
                 return RedirectToAction(nameof(Details), new { id = episodeId });
             }
 
-            // Check 24-hour window for non-admin users
             if (currentUser.Role != UserRole.Admin)
             {
                 var commentTime = DateTime.Parse(comment.Timestamp);

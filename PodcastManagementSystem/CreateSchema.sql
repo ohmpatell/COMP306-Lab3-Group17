@@ -1,4 +1,4 @@
-﻿-- Users
+﻿-- Users just for sample entries, can't be logged in as 
 INSERT INTO AspNetUsers (Id,Role,UserName,NormalizedUserName,Email,NormalizedEmail,EmailConfirmed,PasswordHash,SecurityStamp,ConcurrencyStamp,PhoneNumberConfirmed,TwoFactorEnabled,LockoutEnabled,AccessFailedCount) VALUES
 (N'00000000-0000-0000-0000-000000000001',1,N'admin@podcast.local',N'ADMIN@PODCAST.LOCAL',N'admin@podcast.local',N'ADMIN@PODCAST.LOCAL',1,NULL,NEWID(),NEWID(),0,0,0,0),
 (N'00000000-0000-0000-0000-000000000010',0,N'ohm',N'OHM',N'ohm@podcast.local',N'OHM@PODCAST.LOCAL',1,NULL,NEWID(),NEWID(),0,0,0,0),
