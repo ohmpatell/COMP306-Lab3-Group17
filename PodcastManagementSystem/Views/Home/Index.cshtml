@@ -1,8 +1,132 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@using Microsoft.AspNetCore.Identity
+@using PodcastManagementSystem.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Dashboard";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = currentUser?.Role == UserRole.Admin;
+    var isPodcaster = currentUser?.Role == UserRole.Podcaster;
+    var isListener = currentUser?.Role == UserRole.Listener;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="mb-4">
+    <h1><i class="fas fa-chart-line"></i> Dashboard</h1>
+    <p class="text-muted">Welcome back, @User.Identity.Name (@currentUser.Role.ToString())</p>
+</div>
+
+@if (isPodcaster || isAdmin)
+{
+    <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="card-body">
+            <h4 class="mb-3"><i class="fas fa-tools"></i> Quick Actions</h4>
+            <div class="d-flex gap-3 flex-wrap">
+                <a asp-controller="Podcasts" asp-action="Create" class="btn btn-light">
+                    <i class="fas fa-plus-circle"></i> Create New Podcast
+                </a>
+                <a asp-controller="Episodes" asp-action="Create" class="btn btn-light">
+                    <i class="fas fa-plus"></i> Add New Episode
+                </a>
+                <a asp-controller="Podcasts" asp-action="Index" class="btn btn-outline-light">
+                    <i class="fas fa-list"></i> Manage Podcasts
+                </a>
+                <a asp-controller="Episodes" asp-action="Index" class="btn btn-outline-light">
+                    <i class="fas fa-play-circle"></i> Manage Episodes
+                </a>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row mb-5">
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <i class="fas fa-microphone" style="font-size: 2rem; color: #5a6c7d;"></i>
+            <div class="stat-number">@ViewBag.TotalPodcasts</div>
+            <div class="stat-label">Total Podcasts</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <i class="fas fa-headphones" style="font-size: 2rem; color: #5a6c7d;"></i>
+            <div class="stat-number">@ViewBag.TotalEpisodes</div>
+            <div class="stat-label">Total Episodes</div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-3">
+        <div class="stat-card">
+            <i class="fas fa-users" style="font-size: 2rem; color: #5a6c7d;"></i>
+            <div class="stat-number">@ViewBag.TotalUsers</div>
+            <div class="stat-label">Total Users</div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3><i class="fas fa-fire text-warning"></i> Most Popular</h3>
+            <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="popular" class="btn btn-sm btn-outline-secondary">
+                View All
+            </a>
+        </div>
+        @if (ViewBag.PopularEpisodes != null && ViewBag.PopularEpisodes.Count > 0)
+        {
+            @foreach (var episode in ViewBag.PopularEpisodes)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">@episode.Title</h5>
+                        <p class="card-text mb-2">
+                            <small class="text-muted">@episode.Podcast.Title</small>
+                        </p>
+                        <p class="card-text">
+                            <span class="badge badge-primary"><i class="fas fa-eye"></i> @episode.PlayCount views</span>
+                            <span class="badge badge-success"><i class="fas fa-clock"></i> @episode.Duration min</span>
+                        </p>
+                        <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
+                            <i class="fas fa-play"></i> Listen
+                        </a>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No episodes yet.</p>
+        }
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3><i class="fas fa-clock text-info"></i> Recent Episodes</h3>
+            <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="date" class="btn btn-sm btn-outline-secondary">
+                View All
+            </a>
+        </div>
+        @if (ViewBag.RecentEpisodes != null && ViewBag.RecentEpisodes.Count > 0)
+        {
+            @foreach (var episode in ViewBag.RecentEpisodes)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title">@episode.Title</h5>
+                        <p class="card-text mb-2">
+                            <small class="text-muted">@episode.Podcast.Title</small>
+                        </p>
+                        <p class="card-text">
+                            <span class="badge badge-primary"><i class="fas fa-calendar"></i> @episode.ReleaseDate.ToString("MMM dd, yyyy")</span>
+                            <span class="badge badge-success"><i class="fas fa-user"></i> @episode.Host</span>
+                        </p>
+                        <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
+                            <i class="fas fa-play"></i> Listen
+                        </a>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No episodes yet.</p>
+        }
+    </div>
 </div>

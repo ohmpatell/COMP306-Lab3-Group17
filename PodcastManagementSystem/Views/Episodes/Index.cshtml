@@ -1,0 +1,83 @@
+﻿@model IEnumerable<PodcastManagementSystem.Models.Episode>
+@using Microsoft.AspNetCore.Identity
+@using PodcastManagementSystem.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Episodes";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = currentUser?.Role == UserRole.Admin;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-play-circle"></i> All Episodes</h1>
+    @if (User.Identity.IsAuthenticated && (currentUser.Role == UserRole.Podcaster || currentUser.Role == UserRole.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Episode
+        </a>
+    }
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form asp-action="Index" method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" name="searchTopic" class="form-control" placeholder="Search by topic" value="@ViewBag.SearchTopic" />
+            </div>
+            <div class="col-md-3">
+                <input type="text" name="searchHost" class="form-control" placeholder="Search by host" value="@ViewBag.SearchHost" />
+            </div>
+            <div class="col-md-3">
+                <select name="sortBy" class="form-select">
+                    <option value="">Default Sort</option>
+                    <option value="popular" selected="@(ViewBag.SortBy == "popular")">Most Popular</option>
+                    <option value="date" selected="@(ViewBag.SortBy == "date")">Recent First</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i> Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row">
+    @foreach (var episode in Model)
+    {
+        var canEdit = isAdmin || (currentUser != null && episode.Podcast.CreatorID == currentUser.Id);
+
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100">
+                <div class="card-body">
+                    <h5 class="card-title">@episode.Title</h5>
+                    <p class="card-text">
+                        <small><i class="fas fa-microphone"></i> @episode.Podcast.Title</small><br />
+                        <small><i class="fas fa-user"></i> @episode.Host</small><br />
+                        <small><i class="fas fa-tag"></i> @episode.Topic</small>
+                    </p>
+                    <div class="mb-3">
+                        <span class="badge badge-primary"><i class="fas fa-eye"></i> @episode.PlayCount</span>
+                        <span class="badge badge-success"><i class="fas fa-clock"></i> @episode.Duration min</span>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm flex-fill">
+                            <i class="fas fa-play"></i> View
+                        </a>
+                        @if (canEdit)
+                        {
+                            <a asp-action="Edit" asp-route-id="@episode.EpisodeID" class="btn btn-warning btn-sm">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@episode.EpisodeID" class="btn btn-danger btn-sm">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>

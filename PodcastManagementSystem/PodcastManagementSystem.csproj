@@ -18,15 +18,18 @@
     <PackageReference Include="Microsoft.AspNetCore.Identity.UI" Version="8.0.20" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="8.0.20" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.20" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="9.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Data\Migrations\" />
     <Folder Include="Data\Scripts\" />
     <Folder Include="Data\SQL\" />
+    <Folder Include="Migrations\" />
+    <Folder Include="Models\Entities\" />
     <Folder Include="Models\ViewModels\" />
     <Folder Include="podcast\rds\" />
     <Folder Include="Repositories\Interfaces\" />
-    <Folder Include="Services\Interfaces\" />
     <Folder Include="wwwroot\uploads\" />
   </ItemGroup>
 

@@ -1,0 +1,171 @@
+﻿@model PodcastManagementSystem.Models.Episode
+@using Microsoft.AspNetCore.Identity
+@using PodcastManagementSystem.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Episode Details";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isAdmin = currentUser?.Role == UserRole.Admin;
+    var canEdit = isAdmin || (currentUser != null && Model.Podcast.CreatorID == currentUser.Id);
+}
+
+<div class="mb-4">
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Episodes
+    </a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h1 class="card-title mb-4">@Model.Title</h1>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <p><strong><i class="fas fa-microphone"></i> Podcast:</strong> @Model.Podcast.Title</p>
+                <p><strong><i class="fas fa-user"></i> Host:</strong> @Model.Host</p>
+                <p><strong><i class="fas fa-tag"></i> Topic:</strong> @Model.Topic</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong><i class="fas fa-calendar"></i> Released:</strong> @Model.ReleaseDate.ToString("MMMM dd, yyyy")</p>
+                <p><strong><i class="fas fa-clock"></i> Duration:</strong> @Model.Duration minutes</p>
+                <p><strong><i class="fas fa-eye"></i> Views:</strong> @Model.PlayCount</p>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.AudioFileURL))
+        {
+            <div class="mb-4">
+                <h5><i class="fas fa-headphones"></i> Audio</h5>
+                <audio controls class="w-100" controlsList="nodownload">
+                    <source src="@Model.AudioFileURL" type="audio/mpeg">
+                    <source src="@Model.AudioFileURL" type="audio/mp3">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        }
+
+        @if (!string.IsNullOrEmpty(Model.VideoFileURL))
+        {
+            <div class="mb-4">
+                <h5><i class="fas fa-video"></i> Video</h5>
+                <video controls class="w-100" style="max-height: 500px;" controlsList="nodownload">
+                    <source src="@Model.VideoFileURL" type="video/mp4">
+                    Your browser does not support the video element.
+                </video>
+            </div>
+        }
+
+        @if (canEdit)
+        {
+            <div class="d-flex gap-2">
+                <a asp-action="Edit" asp-route-id="@Model.EpisodeID" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a asp-action="Delete" asp-route-id="@Model.EpisodeID" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Delete
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3><i class="fas fa-comments"></i> Comments</h3>
+    </div>
+    <div class="card-body">
+        @if (User.Identity.IsAuthenticated)
+        {
+            <form asp-action="AddComment" method="post" class="mb-4">
+                <input type="hidden" name="episodeId" value="@Model.EpisodeID" />
+                <div class="mb-3">
+                    <label class="form-label">Add a comment</label>
+                    <textarea name="commentText" class="form-control" rows="3" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i> Post Comment
+                </button>
+            </form>
+        }
+        else
+        {
+            <p class="alert alert-info">Please <a asp-area="Identity" asp-page="/Account/Login">login</a> to add comments.</p>
+        }
+
+        @if (ViewBag.Comments != null && ViewBag.Comments.Count > 0)
+        {
+            @foreach (var comment in ViewBag.Comments)
+            {
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h6 class="card-subtitle mb-2">
+                            <i class="fas fa-user-circle"></i> @comment.Username
+                            <small class="text-muted">- @DateTime.Parse(comment.Timestamp).ToString("MMM dd, yyyy hh:mm tt")</small>
+                        </h6>
+                        <p class="card-text" id="comment-text-@comment.CommentID">@comment.Text</p>
+
+                        @if (User.Identity.IsAuthenticated && User.Identity.Name == comment.UserID)
+                        {
+                            var commentTime = DateTime.Parse(comment.Timestamp);
+                            var hoursSince = (DateTime.UtcNow - commentTime).TotalHours;
+
+                            @if (hoursSince < 24)
+                            {
+                                <button class="btn btn-sm btn-warning" onclick="editComment('@Model.EpisodeID', '@comment.CommentID', '@Html.Raw(comment.Text.Replace("'", "\\'"))')">
+                                    <i class="fas fa-edit"></i> Edit
+                                </button>
+                            }
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <p class="text-muted">No comments yet. Be the first to comment!</p>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function editComment(episodeId, commentId, currentText) {
+            var newText = prompt("Edit your comment:", currentText);
+            if (newText && newText !== currentText) {
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/Episodes/EditComment';
+
+                var episodeInput = document.createElement('input');
+                episodeInput.type = 'hidden';
+                episodeInput.name = 'episodeId';
+                episodeInput.value = episodeId;
+
+                var commentInput = document.createElement('input');
+                commentInput.type = 'hidden';
+                commentInput.name = 'commentId';
+                commentInput.value = commentId;
+
+                var textInput = document.createElement('input');
+                textInput.type = 'hidden';
+                textInput.name = 'commentText';
+                textInput.value = newText;
+
+                var token = document.querySelector('input[name="__RequestVerificationToken"]');
+                var tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = '__RequestVerificationToken';
+                tokenInput.value = token.value;
+
+                form.appendChild(episodeInput);
+                form.appendChild(commentInput);
+                form.appendChild(textInput);
+                form.appendChild(tokenInput);
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+    </script>
+}

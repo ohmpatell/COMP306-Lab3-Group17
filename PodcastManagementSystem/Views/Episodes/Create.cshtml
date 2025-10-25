@@ -1,0 +1,72 @@
+﻿@model PodcastManagementSystem.Models.Episode
+@using Microsoft.AspNetCore.Identity
+@using PodcastManagementSystem.Models
+@inject UserManager<ApplicationUser> UserManager
+
+@{
+    ViewData["Title"] = "Create Episode";
+    var currentUser = await UserManager.GetUserAsync(User);
+    var isPodcaster = currentUser?.Role == UserRole.Podcaster;
+}
+
+<div class="mb-4">
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to List
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h2><i class="fas fa-plus-circle"></i> Create New Episode</h2>
+    </div>
+    <div class="card-body">
+        <form asp-action="Create" method="post" enctype="multipart/form-data">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="PodcastID" class="form-label">Podcast</label>
+                    <select asp-for="PodcastID" class="form-select" asp-items="ViewBag.Podcasts"></select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Title" class="form-label">Title</label>
+                    <input asp-for="Title" class="form-control" required />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Host" class="form-label">Host</label>
+                    <input asp-for="Host" class="form-control" required />
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Topic" class="form-label">Topic</label>
+                    <input asp-for="Topic" class="form-control" required />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Duration" class="form-label">Duration (minutes)</label>
+                    <input asp-for="Duration" class="form-control" type="number" required />
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Audio File</label>
+                    <input type="file" name="audioFile" class="form-control" accept="audio/*" required/>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Video File</label>
+                    <input type="file" name="videoFile" class="form-control" accept="video/*" required />
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Create Episode
+                </button>
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

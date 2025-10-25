@@ -1,77 +1,77 @@
 using Amazon;
-using Amazon.Extensions.NETCore.Setup;
+using Amazon.DynamoDBv2;
+using Amazon.S3;
 using Amazon.Runtime;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using PodcastManagementSystem.Data;
+using PodcastManagementSystem.Models;
+using PodcastManagementSystem.Services;
 
-namespace PodcastManagementSystem
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+var connectionString = builder.Configuration.GetConnectionString("RDSConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseSqlServer(connectionString));
+builder.Services.AddDatabaseDeveloperPageExceptionFilter();
+
+builder.Services.AddDefaultIdentity<ApplicationUser>(options => {
+    options.SignIn.RequireConfirmedAccount = false;
+    options.Password.RequireDigit = false;
+    options.Password.RequireLowercase = false;
+    options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequireUppercase = false;
+    options.Password.RequiredLength = 4;
+})
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+
+builder.Services.AddControllersWithViews();
+builder.Services.AddRazorPages();
+
+// AWS Configuration - Manual Credentials
+var awsCredentials = new BasicAWSCredentials(
+    builder.Configuration["AWS:AccessKey"],
+    builder.Configuration["AWS:SecretKey"]
+);
+
+var awsRegion = RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"]);
+
+builder.Services.AddSingleton<IAmazonDynamoDB>(sp =>
+    new AmazonDynamoDBClient(awsCredentials, awsRegion));
+
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+    new AmazonS3Client(awsCredentials, awsRegion));
+
+// Register application services
+builder.Services.AddScoped<IEpisodeService, EpisodeService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<IS3Service, S3Service>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
 {
-    public class Program
-    {
-        public static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
-
-            // Add services to the container.
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(connectionString));
-            builder.Services.AddDatabaseDeveloperPageExceptionFilter();
-
-            builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-                .AddEntityFrameworkStores<ApplicationDbContext>();
-            builder.Services.AddControllersWithViews();
-
-            var awsAccessKey = builder.Configuration["AWS:AccessKey"];
-            var awsSecretKey = builder.Configuration["AWS:SecretKey"];
-            var awsRegion = builder.Configuration["AWS:Region"];
-
-            var credentials = new BasicAWSCredentials(awsAccessKey, awsSecretKey);
-
-            builder.Configuration.AddSystemsManager("/podcast/rds", new AWSOptions
-            {
-                Region = RegionEndpoint.GetBySystemName(awsRegion),
-                Credentials = credentials
-            });
-
-            var connectionStringParameter = new SqlConnectionStringBuilder(
-                builder.Configuration.GetConnectionString("Connection2RDS")
-            );
-            connectionStringParameter.UserID = builder.Configuration["username"]; 
-            connectionStringParameter.Password = builder.Configuration["password"];
-
-            builder.Services.AddDbContext<PodcastDbContext>(options =>
-                options.UseSqlServer(connectionStringParameter.ConnectionString));
-
-            var app = builder.Build();
-
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseMigrationsEndPoint();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
-
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
-            app.UseRouting();
-
-            app.UseAuthorization();
-
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}");
-            app.MapRazorPages();
-
-            app.Run();
-        }
-    }
+    app.UseMigrationsEndPoint();
 }
+else
+{
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+
+app.UseRouting();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllerRoute(
+    name: "default",
+    pattern: "{controller=Landing}/{action=Index}/{id?}");
+app.MapRazorPages();
+
+app.Run();
