@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -6,11 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>aspnet-PodcastManagementSystem-5f9f1db8-0e06-4bc0-9114-9f800214be1c</UserSecretsId>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Remove="appsettings.Development.json" />
-    <Content Remove="appsettings.json" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Amazon.Extensions.Configuration.SystemsManager" Version="7.0.0" />
@@ -28,7 +23,6 @@
   <ItemGroup>
     <Folder Include="Data\Scripts\" />
     <Folder Include="Data\SQL\" />
-    <Folder Include="Models\Entities\" />
     <Folder Include="Models\ViewModels\" />
     <Folder Include="podcast\rds\" />
     <Folder Include="Repositories\Interfaces\" />
