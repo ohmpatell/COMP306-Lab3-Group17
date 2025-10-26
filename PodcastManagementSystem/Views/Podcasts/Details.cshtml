@@ -1,13 +1,17 @@
 ﻿@model PodcastManagementSystem.Models.Podcast
 @using Microsoft.AspNetCore.Identity
 @using PodcastManagementSystem.Models
+@using PodcastManagementSystem.Services
 @inject UserManager<ApplicationUser> UserManager
+@inject ISubscriptionService SubscriptionService
 
 @{
     ViewData["Title"] = "Podcast Details";
     var currentUser = await UserManager.GetUserAsync(User);
     var isAdmin = currentUser?.Role == UserRole.Admin;
     var canEdit = isAdmin || (currentUser != null && Model.CreatorID == currentUser.Id);
+    var isSubscribed = currentUser != null && await SubscriptionService.IsSubscribedAsync(currentUser.Id, Model.PodcastID);
+    var subscriberCount = await SubscriptionService.GetSubscriberCountAsync(Model.PodcastID);
 }
 
 <div class="mb-4">
@@ -16,10 +20,47 @@
     </a>
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="card mb-4">
     <div class="card-body">
-        <h1 class="card-title">@Model.Title</h1>
-        <p class="lead">@Model.Description</p>
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h1 class="card-title">@Model.Title</h1>
+                <p class="lead">@Model.Description</p>
+            </div>
+            @if (User.Identity.IsAuthenticated)
+            {
+                if (isSubscribed)
+                {
+                    <form asp-controller="Subscriptions" asp-action="Unsubscribe" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="podcastId" value="@Model.PodcastID" />
+                        <input type="hidden" name="returnUrl" value="@Url.Action("Details", "Podcasts", new { id = Model.PodcastID })" />
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-check"></i> Subscribed
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <form asp-controller="Subscriptions" asp-action="Subscribe" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="podcastId" value="@Model.PodcastID" />
+                        <input type="hidden" name="returnUrl" value="@Url.Action("Details", "Podcasts", new { id = Model.PodcastID })" />
+                        <button type="submit" class="btn btn-outline-success">
+                            <i class="fas fa-bookmark"></i> Subscribe
+                        </button>
+                    </form>
+                }
+            }
+        </div>
 
         <hr />
 
@@ -30,6 +71,7 @@
             </div>
             <div class="col-md-6">
                 <p><strong><i class="fas fa-list"></i> Total Episodes:</strong> @Model.Episodes.Count</p>
+                <p><strong><i class="fas fa-users"></i> Subscribers:</strong> @subscriberCount</p>
             </div>
         </div>
 

@@ -1,5 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Identity
 @using PodcastManagementSystem.Models
+@using System.Linq
+@using System.Collections.Generic
 @inject UserManager<ApplicationUser> UserManager
 
 @{
@@ -8,6 +10,25 @@
     var isAdmin = currentUser?.Role == UserRole.Admin;
     var isPodcaster = currentUser?.Role == UserRole.Podcaster;
     var isListener = currentUser?.Role == UserRole.Listener;
+
+    // --- Safe casts / defaults for ViewBag items to avoid RuntimeBinderException ---
+    var myPodcasts = (ViewBag.MyPodcasts as IEnumerable<Podcast>)?.ToList() ?? new List<Podcast>();
+    var topEpisodesByViews = (ViewBag.TopEpisodesByViews as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+    var topEpisodesByComments = (ViewBag.TopEpisodesByComments as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+    var recentEpisodes = (ViewBag.RecentEpisodes as IEnumerable<dynamic>)?.ToList() ?? new List<dynamic>();
+
+    var commentCounts = ViewBag.CommentCounts as IDictionary<int, int> ?? new Dictionary<int, int>();
+    var subscriberCounts = ViewBag.SubscriberCounts as IDictionary<int, int> ?? new Dictionary<int, int>();
+
+    int totalViews = ViewBag.TotalViews is int tv ? tv : 0;
+    int totalSubscribers = ViewBag.TotalSubscribers is int ts ? ts : 0;
+    int totalPodcasts = ViewBag.TotalPodcasts is int tp ? tp : 0;
+    int totalEpisodes = ViewBag.TotalEpisodes is int te ? te : 0;
+    int totalUsers = ViewBag.TotalUsers is int tu ? tu : 0;
+
+    // Derived values using strongly-typed collections
+    int myPodcastsCount = myPodcasts.Count;
+    int myEpisodesCount = myPodcasts.Sum(p => (p.Episodes ?? new List<Episode>()).Count);
 }
 
 <div class="mb-4">
@@ -17,6 +38,7 @@
 
 @if (isPodcaster || isAdmin)
 {
+    <!-- Quick Actions -->
     <div class="card mb-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
         <div class="card-body">
             <h4 class="mb-3"><i class="fas fa-tools"></i> Quick Actions</h4>
@@ -36,97 +58,323 @@
             </div>
         </div>
     </div>
+
+    <!-- Analytics Stats -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-microphone" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@myPodcastsCount</div>
+                <div class="stat-label">My Podcasts</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-headphones" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@myEpisodesCount</div>
+                <div class="stat-label">My Episodes</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-eye" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@totalViews</div>
+                <div class="stat-label">Total Views</div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-users" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@totalSubscribers</div>
+                <div class="stat-label">Total Subscribers</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Tables -->
+    <div class="row mb-4">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-trophy text-warning"></i> Top Episodes by Views</h5>
+                </div>
+                <div class="card-body">
+                    @if (topEpisodesByViews.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Episode</th>
+                                        <th>Podcast</th>
+                                        <th class="text-center">Views</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var episode in topEpisodesByViews)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID">
+                                                    @episode.Title
+                                                </a>
+                                            </td>
+                                            <td><small class="text-muted">@((episode.Podcast != null) ? episode.Podcast.Title : "")</small></td>
+                                            <td class="text-center">
+                                                <span class="badge badge-primary">@episode.PlayCount</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No episodes yet</p>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-comments text-info"></i> Top Episodes by Comments</h5>
+                </div>
+                <div class="card-body">
+                    @if (topEpisodesByComments.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Episode</th>
+                                        <th>Podcast</th>
+                                        <th class="text-center">Comments</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var episode in topEpisodesByComments)
+                                    {
+                                        var commentCount = commentCounts.ContainsKey((int)episode.EpisodeID) ? commentCounts[(int)episode.EpisodeID] : 0;
+                                        <tr>
+                                            <td>
+                                                <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID">
+                                                    @episode.Title
+                                                </a>
+                                            </td>
+                                            <td><small class="text-muted">@((episode.Podcast != null) ? episode.Podcast.Title : "")</small></td>
+                                            <td class="text-center">
+                                                <span class="badge badge-success">@commentCount</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0">No episodes yet</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- My Podcasts Overview -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-microphone"></i> My Podcasts Overview</h5>
+        </div>
+        <div class="card-body">
+            @if (myPodcasts.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Podcast</th>
+                                <th class="text-center">Episodes</th>
+                                <th class="text-center">Subscribers</th>
+                                <th class="text-center">Total Views</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var podcast in myPodcasts)
+                            {
+                                var totalViewsForPodcast = (podcast.Episodes ?? new List<Episode>()).Sum(e => e.PlayCount);
+                                var subscribers = subscriberCounts.ContainsKey(podcast.PodcastID) ? subscriberCounts[podcast.PodcastID] : 0;
+
+                                <tr>
+                                    <td>
+                                        <strong>@podcast.Title</strong><br />
+                                        <small class="text-muted">@podcast.Description</small>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-primary">@((podcast.Episodes ?? new List<Episode>()).Count)</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-success">@subscribers</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge badge-primary">@totalViewsForPodcast</span>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Podcasts" asp-action="Details" asp-route-id="@podcast.PodcastID" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">You haven't created any podcasts yet.</p>
+                <a asp-controller="Podcasts" asp-action="Create" class="btn btn-primary mt-3">
+                    <i class="fas fa-plus"></i> Create Your First Podcast
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Recent Episodes -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-clock"></i> Recent Episodes</h5>
+        </div>
+        <div class="card-body">
+            @if (recentEpisodes.Any())
+            {
+                <div class="row">
+                    @foreach (var episode in recentEpisodes)
+                    {
+                        <div class="col-md-6 mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title">@episode.Title</h6>
+                                    <p class="card-text">
+                                        <small class="text-muted">@((episode.Podcast != null) ? episode.Podcast.Title : "")</small><br />
+                                        <span class="badge badge-primary"><i class="fas fa-calendar"></i> @episode.ReleaseDate.ToString("MMM dd, yyyy")</span>
+                                        <span class="badge badge-success"><i class="fas fa-eye"></i> @episode.PlayCount</span>
+                                    </p>
+                                    <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-play"></i> View
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <p class="text-muted mb-0">No episodes yet</p>
+            }
+        </div>
+    </div>
 }
+else
+{
+    <!-- Listener Dashboard -->
+    <div class="row mb-5">
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-microphone" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@totalPodcasts</div>
+                <div class="stat-label">Total Podcasts</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-headphones" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@totalEpisodes</div>
+                <div class="stat-label">Total Episodes</div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="stat-card">
+                <i class="fas fa-users" style="font-size: 2rem; color: #5a6c7d;"></i>
+                <div class="stat-number">@totalUsers</div>
+                <div class="stat-label">Total Users</div>
+            </div>
+        </div>
+    </div>
 
-<div class="row mb-5">
-    <div class="col-md-4 mb-3">
-        <div class="stat-card">
-            <i class="fas fa-microphone" style="font-size: 2rem; color: #5a6c7d;"></i>
-            <div class="stat-number">@ViewBag.TotalPodcasts</div>
-            <div class="stat-label">Total Podcasts</div>
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-fire text-warning"></i> Most Popular</h3>
+                <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="popular" class="btn btn-sm btn-outline-secondary">
+                    View All
+                </a>
+            </div>
+            @if (ViewBag.PopularEpisodes != null && ((IEnumerable<dynamic>)ViewBag.PopularEpisodes).Any())
+            {
+                foreach (var episode in (IEnumerable<dynamic>)ViewBag.PopularEpisodes)
+                {
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">@episode.Title</h5>
+                            <p class="card-text mb-2">
+                                <small class="text-muted">@((episode.Podcast != null) ? episode.Podcast.Title : "")</small>
+                            </p>
+                            <p class="card-text">
+                                <span class="badge badge-primary"><i class="fas fa-eye"></i> @episode.PlayCount views</span>
+                                <span class="badge badge-success"><i class="fas fa-clock"></i> @episode.Duration min</span>
+                            </p>
+                            <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play"></i> Listen
+                            </a>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted">No episodes yet.</p>
+            }
         </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="stat-card">
-            <i class="fas fa-headphones" style="font-size: 2rem; color: #5a6c7d;"></i>
-            <div class="stat-number">@ViewBag.TotalEpisodes</div>
-            <div class="stat-label">Total Episodes</div>
-        </div>
-    </div>
-    <div class="col-md-4 mb-3">
-        <div class="stat-card">
-            <i class="fas fa-users" style="font-size: 2rem; color: #5a6c7d;"></i>
-            <div class="stat-number">@ViewBag.TotalUsers</div>
-            <div class="stat-label">Total Users</div>
-        </div>
-    </div>
-</div>
 
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3><i class="fas fa-fire text-warning"></i> Most Popular</h3>
-            <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="popular" class="btn btn-sm btn-outline-secondary">
-                View All
-            </a>
-        </div>
-        @if (ViewBag.PopularEpisodes != null && ViewBag.PopularEpisodes.Count > 0)
-        {
-            @foreach (var episode in ViewBag.PopularEpisodes)
+        <div class="col-md-6 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3><i class="fas fa-clock text-info"></i> Recent Episodes</h3>
+                <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="date" class="btn btn-sm btn-outline-secondary">
+                    View All
+                </a>
+            </div>
+            @if (recentEpisodes.Any())
             {
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">@episode.Title</h5>
-                        <p class="card-text mb-2">
-                            <small class="text-muted">@episode.Podcast.Title</small>
-                        </p>
-                        <p class="card-text">
-                            <span class="badge badge-primary"><i class="fas fa-eye"></i> @episode.PlayCount views</span>
-                            <span class="badge badge-success"><i class="fas fa-clock"></i> @episode.Duration min</span>
-                        </p>
-                        <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
-                            <i class="fas fa-play"></i> Listen
-                        </a>
+                @foreach (var episode in recentEpisodes)
+                {
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">@episode.Title</h5>
+                            <p class="card-text mb-2">
+                                <small class="text-muted">@((episode.Podcast != null) ? episode.Podcast.Title : "")</small>
+                            </p>
+                            <p class="card-text">
+                                <span class="badge badge-primary">
+                                    <i class="fas fa-calendar"></i> @episode.ReleaseDate.ToString("MMM dd, yyyy")
+                                </span>
+                                <span class="badge badge-success"><i class="fas fa-user"></i> @episode.Host</span>
+                            </p>
+                            <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
+                                <i class="fas fa-play"></i> Listen
+                            </a>
+                        </div>
                     </div>
-                </div>
+                }
             }
-        }
-        else
-        {
-            <p class="text-muted">No episodes yet.</p>
-        }
-    </div>
-    <div class="col-md-6 mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3><i class="fas fa-clock text-info"></i> Recent Episodes</h3>
-            <a asp-controller="Episodes" asp-action="Index" asp-route-sortBy="date" class="btn btn-sm btn-outline-secondary">
-                View All
-            </a>
-        </div>
-        @if (ViewBag.RecentEpisodes != null && ViewBag.RecentEpisodes.Count > 0)
-        {
-            @foreach (var episode in ViewBag.RecentEpisodes)
+            else
             {
-                <div class="card mb-3">
-                    <div class="card-body">
-                        <h5 class="card-title">@episode.Title</h5>
-                        <p class="card-text mb-2">
-                            <small class="text-muted">@episode.Podcast.Title</small>
-                        </p>
-                        <p class="card-text">
-                            <span class="badge badge-primary"><i class="fas fa-calendar"></i> @episode.ReleaseDate.ToString("MMM dd, yyyy")</span>
-                            <span class="badge badge-success"><i class="fas fa-user"></i> @episode.Host</span>
-                        </p>
-                        <a asp-controller="Episodes" asp-action="Details" asp-route-id="@episode.EpisodeID" class="btn btn-primary btn-sm">
-                            <i class="fas fa-play"></i> Listen
-                        </a>
-                    </div>
-                </div>
+                <p class="text-muted">No episodes yet</p>
             }
-        }
-        else
-        {
-            <p class="text-muted">No episodes yet.</p>
-        }
+        </div>
     </div>
-</div>
+}

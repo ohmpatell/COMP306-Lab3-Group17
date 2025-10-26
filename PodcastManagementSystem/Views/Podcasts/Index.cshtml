@@ -1,7 +1,9 @@
 ﻿@model IEnumerable<PodcastManagementSystem.Models.Podcast>
 @using Microsoft.AspNetCore.Identity
 @using PodcastManagementSystem.Models
+@using PodcastManagementSystem.Services
 @inject UserManager<ApplicationUser> UserManager
+@inject ISubscriptionService SubscriptionService
 
 @{
     ViewData["Title"] = "Podcasts";
@@ -20,10 +22,20 @@
     }
 </div>
 
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+}
+
 <div class="row">
     @foreach (var podcast in Model)
     {
         var canEdit = isAdmin || (currentUser != null && podcast.CreatorID == currentUser.Id);
+        var isSubscribed = currentUser != null && await SubscriptionService.IsSubscribedAsync(currentUser.Id, podcast.PodcastID);
+        var subscriberCount = await SubscriptionService.GetSubscriberCountAsync(podcast.PodcastID);
 
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100">
@@ -34,13 +46,41 @@
                         <small class="text-muted">
                             <i class="fas fa-user"></i> By @podcast.Creator.UserName<br />
                             <i class="fas fa-calendar"></i> Created: @podcast.CreatedDate.ToString("MMM dd, yyyy")<br />
-                            <i class="fas fa-list"></i> @podcast.Episodes.Count episodes
+                            <i class="fas fa-list"></i> @podcast.Episodes.Count episodes<br />
+                            <i class="fas fa-users"></i> @subscriberCount subscribers
                         </small>
                     </p>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex gap-2 flex-wrap">
                         <a asp-action="Details" asp-route-id="@podcast.PodcastID" class="btn btn-primary btn-sm flex-fill">
                             <i class="fas fa-eye"></i> View
                         </a>
+
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            if (isSubscribed)
+                            {
+                                <form asp-controller="Subscriptions" asp-action="Unsubscribe" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="podcastId" value="@podcast.PodcastID" />
+                                    <input type="hidden" name="returnUrl" value="@Url.Action("Index", "Podcasts")" />
+                                    <button type="submit" class="btn btn-success btn-sm">
+                                        <i class="fas fa-check"></i> Subscribed
+                                    </button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-controller="Subscriptions" asp-action="Subscribe" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="podcastId" value="@podcast.PodcastID" />
+                                    <input type="hidden" name="returnUrl" value="@Url.Action("Index", "Podcasts")" />
+                                    <button type="submit" class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-bookmark"></i> Subscribe
+                                    </button>
+                                </form>
+                            }
+                        }
+
                         @if (canEdit)
                         {
                             <a asp-action="Edit" asp-route-id="@podcast.PodcastID" class="btn btn-warning btn-sm">
