@@ -149,6 +149,16 @@ namespace PodcastManagementSystem.Controllers
             }
 
             var existingEpisode = await _episodeService.GetEpisodeByIdAsync(id);
+            if (existingEpisode == null)
+            {
+                return NotFound();
+            }
+
+            existingEpisode.PodcastID = episode.PodcastID;
+            existingEpisode.Title = episode.Title;
+            existingEpisode.Host = episode.Host;
+            existingEpisode.Topic = episode.Topic;
+            existingEpisode.Duration = episode.Duration;
 
             if (audioFile != null)
             {
@@ -156,11 +166,7 @@ namespace PodcastManagementSystem.Controllers
                 {
                     await _s3Service.DeleteFileAsync(existingEpisode.AudioFileURL);
                 }
-                episode.AudioFileURL = await _s3Service.UploadFileAsync(audioFile, "audio");
-            }
-            else
-            {
-                episode.AudioFileURL = existingEpisode.AudioFileURL;
+                existingEpisode.AudioFileURL = await _s3Service.UploadFileAsync(audioFile, "audio");
             }
 
             if (videoFile != null)
@@ -169,17 +175,11 @@ namespace PodcastManagementSystem.Controllers
                 {
                     await _s3Service.DeleteFileAsync(existingEpisode.VideoFileURL);
                 }
-                episode.VideoFileURL = await _s3Service.UploadFileAsync(videoFile, "video");
-            }
-            else
-            {
-                episode.VideoFileURL = existingEpisode.VideoFileURL;
+                existingEpisode.VideoFileURL = await _s3Service.UploadFileAsync(videoFile, "video");
             }
 
-            episode.PlayCount = existingEpisode.PlayCount;
-            episode.ReleaseDate = existingEpisode.ReleaseDate;
 
-            await _episodeService.UpdateEpisodeAsync(episode);
+            await _episodeService.UpdateEpisodeAsync(existingEpisode);
             return RedirectToAction(nameof(Index));
         }
 

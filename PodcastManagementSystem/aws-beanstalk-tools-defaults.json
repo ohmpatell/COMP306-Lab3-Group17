@@ -1,0 +1,20 @@
+
+{
+    "region" : "us-east-2",
+    "configuration" : "Debug",
+    "framework"     : "net8.0",
+    "self-contained" : true,
+    "application"    : "PodcastManagementSystem",
+    "environment"    : "PodcastManagementSystem-test",
+    "enable-xray"    : false,
+    "enhanced-health-type" : "basic",
+    "additional-options"   : "\"aws:autoscaling:launchconfiguration,SecurityGroups\"=\"sg-0db5b3ef01b3df98c\";\"aws:ec2:vpc,Subnets\"=\"subnet-02de7a8dc4b8e427d\"",
+    "solution-stack"       : "64bit Amazon Linux 2 v2.11.7 running .NET Core",
+    "environment-type"     : "SingleInstance",
+    "cname"                : "podcastmanagementsystem-test",
+    "instance-type"        : "t3a.micro",
+    "key-pair"             : "key1",
+    "instance-profile"     : "aws-elasticbeanstalk-ec2-role",
+    "service-role"         : "aws-elasticbeanstalk-service-role",
+    "proxy-server"         : "nginx"
+}
